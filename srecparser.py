@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # srecparser.py
 #
 # Copyright (C) 2011 Gabriel Tremblay - initnull hat gmail.com
@@ -21,12 +22,29 @@
     - Kudos to Montreal CISSP Groupies
 """
 
+import sys
 import srecutils
 from optparse import OptionParser
 
+def __generate_option_parser():
+    usage_str = "usage: srecparser.py [options] filename"
+    parser = OptionParser(usage=usage_str)
+
+    return parser
+
 if __name__ == "__main__":
     #http://docs.python.org/library/optparse.html
-    pass
+    parser = __generate_option_parser()
+    (options, args) = parser.parse_args(sys.argv)
+
+    if len(args) < 2:
+        parser.print_help()
+        sys.exit()
+
+
+
+
+
 
 # Script entry point. hello world.
 #if __name__ == "__main__":
