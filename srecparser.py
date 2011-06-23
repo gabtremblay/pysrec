@@ -27,89 +27,96 @@ import srecutils
 from optparse import OptionParser
 
 def __generate_option_parser():
-    usage_str = "usage: srecparser.py [options] filename"
+    usage_str = "usage: %prog [options] filename"
     parser = OptionParser(usage=usage_str)
+    parser.add_option("-r", action="store_true",
+                      dest="readable", help="Human-readable output [default: %default]", default=False)
+    parser.add_option("-w", action="store_true",
+                      dest="wraparound", help="Wrap around characters [default: %default]", default=True)
+    parser.add_option("-c", action="store_true",
+                      dest="validate_checksum", help="Disable checksum validation [default: %default]", default=False)
+    parser.add_option("-l", action="store_true",
+                      dest="print_lines_number", help="Print line number [default: %default]", default=False)
+    parser.add_option("-d", action="store_true",
+                      dest="data_only", help="Data only [default: %default]", default=False)
+    parser.add_option("-o", metavar="OFFSET", dest="offset", help="Add OFFSET to bytes [default: %default]", default=0)
 
     return parser
 
+
 if __name__ == "__main__":
-    #http://docs.python.org/library/optparse.html
     parser = __generate_option_parser()
     (options, args) = parser.parse_args(sys.argv)
+    print options
 
-    if len(args) < 2:
+    if len(args) <= 1 or len(args) > 2:
         parser.print_help()
         sys.exit()
 
+    # open input file
+    scn_file = open(args[1])
+
+    if options.wraparound:
+        print "- Wrap around enabled"
+
+    linecount = 0
+    for srec in scn_file:
+        # Strip some file content
+        srec = srec.strip("\n")
+        srec = srec.strip("\r")
+
+        # Validate checksum and parse record
+        if options.validate_checksum and not srecutils.validate_srec_checksum(srec):
+            print "Invalid checksum found!"
+        else:
+            # Extract data from the srec
+            record_type, data_len, addr, data, checksum = srecutils.parse_srec(srec)
+
+            if record_type == 'S2':
+                # Apply offset with options
+                if options.offset != int(0):
+                    offset_data = srecutils.offset_data(data, int(options.offset), options.readable, options.wraparound)
+                else:
+                    offset_data = data
+
+                # If output is human readable, Get a non human readable for checksum calculation
+                if options.readable:
+                    raw_offset_data = srecutils.offset_data(data, int(options.offset), False,  options.wraparound)
+                else:
+                    raw_offset_data = data
+
+                # Get checksum of the new offset srec
+                raw_offset_srec = ''.join([record_type, data_len, addr, raw_offset_data])
+                int_checksum = srecutils.compute_srec_checksum(raw_offset_srec)
+                checksum = srecutils.int_to_padded_hex_byte(int_checksum)
+
+                # build output string
+                if options.readable:
+                    output_str = offset_data
+                else:
+                    output_str = raw_offset_srec
+
+                if not options.data_only:
+                    output_str =  ''.join([raw_offset_srec, checksum])
+
+                if options.print_lines_number:
+                    output_str = ''.join([str(linecount), ': ', output_str])
+
+                # output to file
+                print ''.join([output_str, '\n']),
 
 
+            # All the other record types
+            else:
+                output_str = ''.join([srec, '\n'])
+
+                if options.print_lines_number:
+                   output_str = ''.join([str(linecount), ': ', output_str])
+
+                print output_str,
 
 
+        # increment our fancy linecounter
+        linecount += 1
 
-# Script entry point. hello world.
-#if __name__ == "__main__":
-#    scn_file = open(__FILE)
-#    output = open('output.txt', "w")
-#
-#    if __WRAPAROUND:
-#        print "- Wraparound enabled"
-#
-#    linecount = 0
-#    for srec in scn_file:
-#        # Strip some file info
-#        srec = srec.strip("\n")
-#        srec = srec.strip("\r")
-#
-#        # Validate checksum and parse record
-#        if not __validate_srec_checksum(srec):
-#            print "Invalid checksum found!"
-#        else:
-#            # Extract data from the srec
-#            record_type, data_len, addr, data, checksum = __extract_data_from_srec(srec)
-#
-#            if record_type == 'S2':
-#                # Apply offset with options
-#                offset_data = __offset_data(data, __TEXT_OFFSET, __HUMAN_READABLE, __WRAPAROUND)
-#
-#                # If output is human readable, Get a non human readable for checksum calculation
-#                if __HUMAN_READABLE:
-#                    raw_offset_data = __offset_data(data, __TEXT_OFFSET, False, __WRAPAROUND)
-#                else:
-#                    raw_offset_data = offset_data
-#
-#                # Get checksum of the new offset srec
-#                raw_offset_srec = ''.join([record_type, data_len, addr, raw_offset_data])
-#                int_checksum = __compute_srec_checksum(raw_offset_srec)
-#                checksum = __int_to_hex_byte(int_checksum)
-#
-#                # build output string
-#                if __HUMAN_READABLE:
-#                    output_str = offset_data
-#                else:
-#                    output_str = raw_offset_srec
-#
-#                if not __DATA_ONLY:
-#                    output_str =  ''.join([raw_offset_srec, checksum])
-#
-#                if __SHOW_LINES:
-#                    output_str = ''.join([str(linecount), ': ', output_str])
-#
-#                # output to file
-#                output.write(''.join([output_str, '\n']))
-#
-#
-#            # All the other record types
-#            else:
-#                output_str = ''.join([srec, '\n'])
-#
-#                if __SHOW_LINES:
-#                   output_str = ''.join([str(linecount), ': ', output_str])
-#
-#                output.write(output_str)
-#
-#
-#        # increment our fancy linecounter
-#        linecount += 1
-#
-#    scn_file.close()
-#    output.close()
+    scn_file.close()
