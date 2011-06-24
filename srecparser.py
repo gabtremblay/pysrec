@@ -47,7 +47,6 @@ def __generate_option_parser():
 if __name__ == "__main__":
     parser = __generate_option_parser()
     (options, args) = parser.parse_args(sys.argv)
-    print options
 
     if len(args) <= 1 or len(args) > 2:
         parser.print_help()
