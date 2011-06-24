@@ -22,6 +22,7 @@
 """
 
 # Address len in bytes for S* types
+# http://www.amelek.gda.pl/avr/uisp/srecord.htm
 __ADDR_LEN = {'S0' : 2,
               'S1' : 2,
               'S2' : 3,
@@ -113,7 +114,7 @@ def get_readable_string(integer):
     return readable_string
 
 
-def offset_byte_in_data(target_data, offset, target_byte_pos, readeable = False, wraparound = False):
+def offset_byte_in_data(target_data, offset, target_byte_pos, readable = False, wraparound = False):
     """
         Offset a given byte in the provided data payload (kind of rot(x))
         readable will return a human-readable representation of the byte+offset
@@ -132,7 +133,7 @@ def offset_byte_in_data(target_data, offset, target_byte_pos, readeable = False,
         int_value -= 256
 
     # Extract readable char for analysis
-    if readeable:
+    if readable:
         if int_value < 256 and int_value > 0:
             offset_byte = get_readable_string(int_value)
         else:
@@ -145,14 +146,14 @@ def offset_byte_in_data(target_data, offset, target_byte_pos, readeable = False,
 
 
 # offset can be from -255 to 255
-def offset_data(data_section, offset, readeable = False, wraparound = False):
+def offset_data(data_section, offset, readable = False, wraparound = False):
     """
         Offset the whole data section.
         see offset_byte_in_data for more information
         Returns: the entire data section + offset on each byte
     """
     for pos in range(0, len(data_section)/2):
-        data_section = offset_byte_in_data(data_section, offset, pos, readeable, wraparound)
+        data_section = offset_byte_in_data(data_section, offset, pos, readable, wraparound)
 
     return data_section
 

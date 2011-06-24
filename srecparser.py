@@ -56,9 +56,6 @@ if __name__ == "__main__":
     # open input file
     scn_file = open(args[1])
 
-    if options.wraparound:
-        print "- Wrap around enabled"
-
     linecount = 0
     for srec in scn_file:
         # Strip some file content
@@ -72,38 +69,26 @@ if __name__ == "__main__":
             # Extract data from the srec
             record_type, data_len, addr, data, checksum = srecutils.parse_srec(srec)
 
-            if record_type == 'S2':
-                # Apply offset with options
-                if options.offset != int(0):
-                    offset_data = srecutils.offset_data(data, int(options.offset), options.readable, options.wraparound)
-                else:
-                    offset_data = data
+            if record_type == 'S1' or record_type == 'S2' or record_type == 'S3':
+                # Make a copy of the original data record for checksum calculation
+                raw_data = data
 
-                # If output is human readable, Get a non human readable for checksum calculation
-                if options.readable:
-                    raw_offset_data = srecutils.offset_data(data, int(options.offset), False,  options.wraparound)
-                else:
-                    raw_offset_data = data
+                # Apply offset (default is 0)
+                data = srecutils.offset_data(data, int(options.offset), options.readable, options.wraparound)
 
                 # Get checksum of the new offset srec
-                raw_offset_srec = ''.join([record_type, data_len, addr, raw_offset_data])
+                raw_offset_srec = ''.join([record_type, data_len, addr, raw_data])
                 int_checksum = srecutils.compute_srec_checksum(raw_offset_srec)
                 checksum = srecutils.int_to_padded_hex_byte(int_checksum)
 
-                # build output string
-                if options.readable:
-                    output_str = offset_data
-                else:
-                    output_str = raw_offset_srec
-
                 if not options.data_only:
-                    output_str =  ''.join([raw_offset_srec, checksum])
+                    data =  ''.join([record_type, data_len, addr, data, checksum])
 
                 if options.print_lines_number:
-                    output_str = ''.join([str(linecount), ': ', output_str])
+                    data = ''.join([str(linecount), ': ', data])
 
                 # output to file
-                print ''.join([output_str, '\n']),
+                print ''.join([data, '\n']),
 
 
             # All the other record types
